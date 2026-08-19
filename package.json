@@ -1,0 +1,25 @@
+{
+  "name": "advanced-js-assignment",
+  "version": "1.0.0",
+  "description": "A responsive GitHub Users Dashboard built with **HTML, Tailwind CSS, and Vanilla JavaScript**.",
+  "main": "app.js",
+   "scripts": {
+  "build": "tsc",
+  "watch": "tsc --watch"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srizan-amicus/Advanced-git.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/srizan-amicus/Advanced-git/issues"
+  },
+  "homepage": "https://github.com/srizan-amicus/Advanced-git#readme",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
