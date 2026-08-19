@@ -1,12 +1,4 @@
-Absolutely — your current README has the right information, but it reads more like a **feature checklist** than a polished project README.
- 
-For a new developer, I'd structure it as:
- 
-**Setup → Overview → Features → How It Works → API → Rate Limits → Project Structure → Technologies → Error Handling → Usage**
- 
-One important note: I’d phrase the VPN/IP point carefully. GitHub’s unauthenticated REST API rate limit is generally **60 requests per hour per IP address**. Changing networks/IPs can result in a different rate-limit bucket, but it’s not a guaranteed or recommended long-term solution. A proper production solution would use authenticated requests or another backend strategy.
- 
-Here’s a much more professional version you can use:
+
  
 # GitHub Users Dashboard
  
