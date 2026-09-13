@@ -8,7 +8,6 @@ let currentPage = 1;
 const usersPerPage = 6;
 // DOM ELEMENTS
 const input = document.getElementById("input");
-const btn = document.getElementById("btn");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const pageNumber = document.getElementById("page-number");
@@ -61,20 +60,11 @@ function transformUser(user) {
         avatar: user.avatar_url,
     };
 }
-// FILTERING
-function applyFilter(event) {
-    event.preventDefault();
-    const minLength = Number(input.value);
-    if (!input.value.trim() ||
-        !Number.isInteger(minLength) ||
-        minLength < 1) {
-        filterError.textContent =
-            "Enter a whole number of at least 1.";
-        input.focus();
-        return;
-    }
-    filterError.textContent = "";
-    filteredUsers = transformedUsers.filter((user) => user.login.length >= minLength);
+// searching
+function applySearch(event) {
+    const target = event.currentTarget;
+    const searchTerm = target.value.trim().toLowerCase();
+    filteredUsers = transformedUsers.filter((user) => user.login.toLowerCase().includes(searchTerm));
     currentPage = 1;
     pageNumber.textContent = String(currentPage);
     renderUsers(filteredUsers);
@@ -113,7 +103,7 @@ function renderUsers(users) {
         </p>
 
         <p class="mt-2 text-sm text-zinc-500">
-          Try using a smaller login length.
+          Try a different name or username.
         </p>
       </div>
     `;
@@ -178,24 +168,10 @@ function updatePagination() {
     nextBtn.disabled =
         currentPage === totalPages || totalPages === 0;
 }
-// INPUT EVENT HANDLER
-function handleInputChange(event) {
-    const target = event.currentTarget;
-    if (target.value.trim()) {
-        filterError.textContent = "";
-    }
-}
-function handleInputKeydown(event) {
-    if (event.key === "Enter") {
-        applyFilter(event);
-    }
-}
 // EVENT LISTENERS
-btn.addEventListener("click", applyFilter);
 nextBtn.addEventListener("click", goToNextPage);
 prevBtn.addEventListener("click", goToPreviousPage);
-input.addEventListener("input", handleInputChange);
-input.addEventListener("keydown", handleInputKeydown);
+input.addEventListener("input", applySearch);
 // INITIALIZATION
 async function init() {
     showLoading();

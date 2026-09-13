@@ -16,7 +16,7 @@ const usersPerPage = 6;
 
 // DOM ELEMENTS
 const input = document.getElementById("input") as HTMLInputElement;
-const btn = document.getElementById("btn") as HTMLButtonElement;
+
 
 const prevBtn = document.getElementById(
   "prev-btn",
@@ -99,29 +99,15 @@ function transformUser(user: GitHubUserBasic): UserCard {
   };
 }
 
-// FILTERING
-function applyFilter(event: Event): void {
-  event.preventDefault();
+// searching
+function applySearch(event: InputEvent): void {
+  const target = event.currentTarget as HTMLInputElement;
 
-  const minLength = Number(input.value);
-
-  if (
-    !input.value.trim() ||
-    !Number.isInteger(minLength) ||
-    minLength < 1
-  ) {
-    filterError.textContent =
-      "Enter a whole number of at least 1.";
-
-    input.focus();
-
-    return;
-  }
-
-  filterError.textContent = "";
+  const searchTerm = target.value.trim().toLowerCase();
 
   filteredUsers = transformedUsers.filter(
-    (user: UserCard) => user.login.length >= minLength,
+    (user: UserCard) =>
+      user.login.toLowerCase().includes(searchTerm),
   );
 
   currentPage = 1;
@@ -129,7 +115,6 @@ function applyFilter(event: Event): void {
 
   renderUsers(filteredUsers);
 }
-
 // PAGINATION
 function goToNextPage(event: MouseEvent): void {
   event.preventDefault();
@@ -183,7 +168,7 @@ function renderUsers(users: UserCard[]): void {
         </p>
 
         <p class="mt-2 text-sm text-zinc-500">
-          Try using a smaller login length.
+          Try a different name or username.
         </p>
       </div>
     `;
@@ -260,27 +245,12 @@ function updatePagination(): void {
     currentPage === totalPages || totalPages === 0;
 }
 
-// INPUT EVENT HANDLER
-function handleInputChange(event: Event): void {
-  const target = event.currentTarget as HTMLInputElement;
-
-  if (target.value.trim()) {
-    filterError.textContent = "";
-  }
-}
-
-function handleInputKeydown(event: KeyboardEvent): void {
-  if (event.key === "Enter") {
-    applyFilter(event);
-  }
-}
 
 // EVENT LISTENERS
-btn.addEventListener("click", applyFilter);
+
 nextBtn.addEventListener("click", goToNextPage);
 prevBtn.addEventListener("click", goToPreviousPage);
-input.addEventListener("input", handleInputChange);
-input.addEventListener("keydown", handleInputKeydown);
+input.addEventListener("input", applySearch);
 
 // INITIALIZATION
 async function init(): Promise<void> {
