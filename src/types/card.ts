@@ -9,7 +9,7 @@ export interface GitHubUser {
 
 export type GitHubUserBasic = Pick<
   GitHubUser,
-  "login" | "id" | "avatar_url"
+  "login" | "id" | "avatar_url" | "name"
 >;
 
 export interface GitHubFollower {

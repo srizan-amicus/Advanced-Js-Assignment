@@ -8,17 +8,20 @@ import {
 const GITHUB_API = "https://api.github.com";
 
 export class ApiService {
-  async getUsers(): Promise<GitHubUser[]> {
-    const result = await apiRequest<GitHubUser[]>(
-      `${GITHUB_API}/users`,
-    );
+async getUsers(since?: number): Promise<GitHubUser[]> {
+  const url = since
+    ? `${GITHUB_API}/users?per_page=10&since=${since}`
+    : `${GITHUB_API}/users?per_page=10`;
 
-    if (!result.success) {
-      throw new Error(result.error);
-    }
+  const result = await apiRequest<GitHubUser[]>(url);
 
-    return result.data;
+  if (!result.success) {
+    throw new Error(result.error);
   }
+
+  return result.data;
+}
+
 
   async getUser(username: string): Promise<GitHubUser> {
     const result = await apiRequest<GitHubUser>(

@@ -5,7 +5,9 @@ const apiService = new ApiService();
 let transformedUsers = [];
 let filteredUsers = [];
 let currentPage = 1;
-const usersPerPage = 6;
+let hasNextPage = true;
+let lastUserId = null;
+const usersPerPage = 10;
 // DOM ELEMENTS
 const input = document.getElementById("input");
 const prevBtn = document.getElementById("prev-btn");
@@ -14,7 +16,6 @@ const pageNumber = document.getElementById("page-number");
 const usersContainer = document.getElementById("users-container");
 const loading = document.getElementById("loading");
 const usersCount = document.getElementById("users-count");
-const filterError = document.getElementById("filter-error");
 // LOADING UI
 function showLoading() {
     loading.innerHTML = `
@@ -57,6 +58,7 @@ function transformUser(user) {
     return {
         login: user.login,
         id: user.id,
+        name: user.name,
         avatar: user.avatar_url,
     };
 }
@@ -64,27 +66,53 @@ function transformUser(user) {
 function applySearch(event) {
     const target = event.currentTarget;
     const searchTerm = target.value.trim().toLowerCase();
-    filteredUsers = transformedUsers.filter((user) => user.login.toLowerCase().includes(searchTerm));
-    currentPage = 1;
-    pageNumber.textContent = String(currentPage);
+    filteredUsers = transformedUsers.filter((user) => user.login.toLowerCase().includes(searchTerm) ||
+        user.name?.toLowerCase().includes(searchTerm));
     renderUsers(filteredUsers);
 }
 // PAGINATION
-function goToNextPage(event) {
+async function goToNextPage(event) {
     event.preventDefault();
-    const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-    if (currentPage < totalPages) {
+    if (!hasNextPage || lastUserId === null) {
+        return;
+    }
+    showLoading();
+    try {
+        const users = await apiService.getUsers(lastUserId);
+        hasNextPage = users.length === usersPerPage;
+        if (users.length > 0) {
+            lastUserId = users[users.length - 1].id;
+        }
         currentPage++;
         pageNumber.textContent = String(currentPage);
+        transformedUsers = users.map(transformUser);
+        filteredUsers = transformedUsers;
         renderUsers(filteredUsers);
     }
+    catch (error) {
+        console.error("Failed to load next page:", error);
+        showError();
+    }
 }
-function goToPreviousPage(event) {
+//previous page pagination logic
+async function goToPreviousPage(event) {
     event.preventDefault();
-    if (currentPage > 1) {
-        currentPage--;
-        pageNumber.textContent = String(currentPage);
+    if (currentPage <= 1) {
+        return;
+    }
+    currentPage--;
+    pageNumber.textContent = String(currentPage);
+    showLoading();
+    try {
+        const users = await apiService.getUsers(currentPage);
+        hasNextPage = users.length === usersPerPage;
+        transformedUsers = users.map(transformUser);
+        filteredUsers = transformedUsers;
         renderUsers(filteredUsers);
+    }
+    catch (error) {
+        console.error("Failed to load previous page:", error);
+        showError();
     }
 }
 // RENDER USERS
@@ -92,8 +120,7 @@ function renderUsers(users) {
     usersCount.textContent = `${users.length} users`;
     loading.innerHTML = "";
     usersContainer.innerHTML = "";
-    const start = (currentPage - 1) * usersPerPage;
-    const paginatedUsers = users.slice(start, start + usersPerPage);
+    const paginatedUsers = users;
     // No results
     if (paginatedUsers.length === 0) {
         usersContainer.innerHTML = `
@@ -163,10 +190,8 @@ usersContainer.addEventListener("click", (event) => {
 });
 // PAGINATION UI
 function updatePagination() {
-    const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
     prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled =
-        currentPage === totalPages || totalPages === 0;
+    nextBtn.disabled = !hasNextPage;
 }
 // EVENT LISTENERS
 nextBtn.addEventListener("click", goToNextPage);
@@ -177,6 +202,10 @@ async function init() {
     showLoading();
     try {
         const users = await apiService.getUsers();
+        hasNextPage = users.length === usersPerPage;
+        if (users.length > 0) {
+            lastUserId = users[users.length - 1].id;
+        }
         transformedUsers = users.map(transformUser);
         filteredUsers = transformedUsers;
         renderUsers(filteredUsers);

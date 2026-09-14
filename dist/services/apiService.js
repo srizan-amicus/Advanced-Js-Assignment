@@ -1,8 +1,11 @@
 import { apiRequest } from "../utils/api.js";
 const GITHUB_API = "https://api.github.com";
 export class ApiService {
-    async getUsers() {
-        const result = await apiRequest(`${GITHUB_API}/users`);
+    async getUsers(since) {
+        const url = since
+            ? `${GITHUB_API}/users?per_page=10&since=${since}`
+            : `${GITHUB_API}/users?per_page=10`;
+        const result = await apiRequest(url);
         if (!result.success) {
             throw new Error(result.error);
         }

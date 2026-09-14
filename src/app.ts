@@ -11,8 +11,9 @@ let transformedUsers: UserCard[] = [];
 let filteredUsers: UserCard[] = [];
 
 let currentPage = 1;
-
-const usersPerPage = 6;
+let hasNextPage = true;
+let lastUserId: number | null = null;
+const usersPerPage = 10;
 
 // DOM ELEMENTS
 const input = document.getElementById("input") as HTMLInputElement;
@@ -41,11 +42,6 @@ const loading = document.getElementById(
 const usersCount = document.getElementById(
   "users-count",
 ) as HTMLParagraphElement;
-
-const filterError = document.getElementById(
-  "filter-error",
-) as HTMLParagraphElement;
-
 
 // LOADING UI
 function showLoading(): void {
@@ -95,6 +91,7 @@ function transformUser(user: GitHubUserBasic): UserCard {
   return {
     login: user.login,
     id: user.id,
+    name:user.name,
     avatar: user.avatar_url,
   };
 }
@@ -106,41 +103,80 @@ function applySearch(event: InputEvent): void {
   const searchTerm = target.value.trim().toLowerCase();
 
   filteredUsers = transformedUsers.filter(
-    (user: UserCard) =>
-      user.login.toLowerCase().includes(searchTerm),
-  );
-
-  currentPage = 1;
-  pageNumber.textContent = String(currentPage);
-
+  (user: UserCard) =>
+    user.login.toLowerCase().includes(searchTerm) ||
+    user.name?.toLowerCase().includes(searchTerm),
+);
   renderUsers(filteredUsers);
 }
+
 // PAGINATION
-function goToNextPage(event: MouseEvent): void {
+async function goToNextPage(event: MouseEvent): Promise<void> {
   event.preventDefault();
 
-  const totalPages = Math.ceil(
-    filteredUsers.length / usersPerPage,
-  );
+  if (!hasNextPage || lastUserId === null) {
+    return;
+  }
 
-  if (currentPage < totalPages) {
+  showLoading();
+
+  try {
+    const users = await apiService.getUsers(lastUserId);
+
+    hasNextPage = users.length === usersPerPage;
+
+    if (users.length > 0) {
+      lastUserId = users[users.length - 1].id;
+    }
+
     currentPage++;
-
     pageNumber.textContent = String(currentPage);
 
+    transformedUsers = users.map(transformUser);
+    filteredUsers = transformedUsers;
+
     renderUsers(filteredUsers);
+  } catch (error) {
+    console.error(
+      "Failed to load next page:",
+      error,
+    );
+
+    showError();
   }
 }
 
-function goToPreviousPage(event: MouseEvent): void {
+
+//previous page pagination logic
+async function goToPreviousPage(event: MouseEvent): Promise<void> {
   event.preventDefault();
 
-  if (currentPage > 1) {
-    currentPage--;
+  if (currentPage <= 1) {
+    return;
+  }
 
-    pageNumber.textContent = String(currentPage);
+  currentPage--;
+
+  pageNumber.textContent = String(currentPage);
+
+  showLoading();
+
+  try {
+    const users = await apiService.getUsers(currentPage);
+
+    hasNextPage = users.length === usersPerPage;
+
+    transformedUsers = users.map(transformUser);
+    filteredUsers = transformedUsers;
 
     renderUsers(filteredUsers);
+  } catch (error) {
+    console.error(
+      "Failed to load previous page:",
+      error,
+    );
+
+    showError();
   }
 }
 
@@ -152,12 +188,7 @@ function renderUsers(users: UserCard[]): void {
 
   usersContainer.innerHTML = "";
 
-  const start = (currentPage - 1) * usersPerPage;
-
-  const paginatedUsers = users.slice(
-    start,
-    start + usersPerPage,
-  );
+ const paginatedUsers = users;
 
   // No results
   if (paginatedUsers.length === 0) {
@@ -235,14 +266,8 @@ usersContainer.addEventListener("click", (event: MouseEvent) => {
 
 // PAGINATION UI
 function updatePagination(): void {
-  const totalPages = Math.ceil(
-    filteredUsers.length / usersPerPage,
-  );
-
   prevBtn.disabled = currentPage === 1;
-
-  nextBtn.disabled =
-    currentPage === totalPages || totalPages === 0;
+  nextBtn.disabled = !hasNextPage;
 }
 
 
@@ -258,6 +283,10 @@ async function init(): Promise<void> {
 
   try {
     const users = await apiService.getUsers();
+    hasNextPage = users.length === usersPerPage;
+    if (users.length > 0) {
+      lastUserId = users[users.length - 1].id;
+    }
     transformedUsers = users.map(transformUser);
     filteredUsers = transformedUsers;
     renderUsers(filteredUsers);
