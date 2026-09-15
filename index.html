@@ -29,6 +29,13 @@
         </div>
       </header>
 
+      <a
+  href="repositories.html"
+  class="mt-6 inline-flex items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-500"
+>
+  Go to Repositories
+</a>
+
       <section class="mt-10">
         <section class="mt-10">
   <div
@@ -49,12 +56,7 @@
 
       <div class="w-full lg:w-auto">
         <div class="relative">
-          <span
-            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-          >
-            🔍
-          </span>
-
+          
           <input
             id="input"
             type="search"
@@ -64,6 +66,22 @@
           />
         </div>
       </div>
+      <div>
+  <label
+    for="sort"
+    class="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500"
+  >
+    Sort by name
+  </label>
+
+  <select
+    id="sort"
+    class="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/10 sm:w-40"
+  >
+    <option value="asc">A → Z</option>
+    <option value="desc">Z → A</option>
+  </select>
+</div>
     </div>
   </div>
 </section>

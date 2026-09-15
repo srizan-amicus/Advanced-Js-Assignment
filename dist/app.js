@@ -7,9 +7,11 @@ let filteredUsers = [];
 let currentPage = 1;
 let hasNextPage = true;
 let lastUserId = null;
+let sortDirection = "asc";
 const usersPerPage = 10;
 // DOM ELEMENTS
 const input = document.getElementById("input");
+const sortSelect = document.getElementById("sort");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const pageNumber = document.getElementById("page-number");
@@ -53,7 +55,8 @@ function showError() {
     </div>
   `;
 }
-//picking only the field required for cards
+// TRANSFORM USER
+// Picks only the fields required by the UI.
 function transformUser(user) {
     return {
         login: user.login,
@@ -62,15 +65,27 @@ function transformUser(user) {
         avatar: user.avatar_url,
     };
 }
-// searching
-function applySearch(event) {
-    const target = event.currentTarget;
-    const searchTerm = target.value.trim().toLowerCase();
-    filteredUsers = transformedUsers.filter((user) => user.login.toLowerCase().includes(searchTerm) ||
-        user.name?.toLowerCase().includes(searchTerm));
+// FILTER + SORT
+function applyFiltersAndSort(searchTerm) {
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+    let result = transformedUsers.filter((user) => user.login.toLowerCase().includes(normalizedSearchTerm) ||
+        user.name?.toLowerCase().includes(normalizedSearchTerm));
+    result = [...result].sort((a, b) => {
+        const nameA = a.name ?? a.login;
+        const nameB = b.name ?? b.login;
+        return sortDirection === "asc"
+            ? nameA.localeCompare(nameB)
+            : nameB.localeCompare(nameA);
+    });
+    filteredUsers = result;
     renderUsers(filteredUsers);
 }
-// PAGINATION
+// SEARCH
+function applySearch(event) {
+    const target = event.currentTarget;
+    applyFiltersAndSort(target.value);
+}
+// NEXT PAGE
 async function goToNextPage(event) {
     event.preventDefault();
     if (!hasNextPage || lastUserId === null) {
@@ -86,15 +101,14 @@ async function goToNextPage(event) {
         currentPage++;
         pageNumber.textContent = String(currentPage);
         transformedUsers = users.map(transformUser);
-        filteredUsers = transformedUsers;
-        renderUsers(filteredUsers);
+        applyFiltersAndSort(input.value);
     }
     catch (error) {
         console.error("Failed to load next page:", error);
         showError();
     }
 }
-//previous page pagination logic
+// PREVIOUS PAGE
 async function goToPreviousPage(event) {
     event.preventDefault();
     if (currentPage <= 1) {
@@ -106,9 +120,11 @@ async function goToPreviousPage(event) {
     try {
         const users = await apiService.getUsers(currentPage);
         hasNextPage = users.length === usersPerPage;
+        if (users.length > 0) {
+            lastUserId = users[users.length - 1].id;
+        }
         transformedUsers = users.map(transformUser);
-        filteredUsers = transformedUsers;
-        renderUsers(filteredUsers);
+        applyFiltersAndSort(input.value);
     }
     catch (error) {
         console.error("Failed to load previous page:", error);
@@ -120,8 +136,9 @@ function renderUsers(users) {
     usersCount.textContent = `${users.length} users`;
     loading.innerHTML = "";
     usersContainer.innerHTML = "";
+    // API already returns only 10 users per page.
     const paginatedUsers = users;
-    // No results
+    // NO RESULTS
     if (paginatedUsers.length === 0) {
         usersContainer.innerHTML = `
       <div class="col-span-full rounded-3xl border border-white/10 bg-white/[0.04] p-10 text-center">
@@ -135,7 +152,7 @@ function renderUsers(users) {
       </div>
     `;
     }
-    // Render cards
+    // RENDER CARDS
     paginatedUsers.forEach((user) => {
         usersContainer.innerHTML += `
       <article
@@ -178,6 +195,7 @@ function renderUsers(users) {
     });
     updatePagination();
 }
+// PROFILE LINK HANDLING
 usersContainer.addEventListener("click", (event) => {
     const target = event.target;
     const profileLink = target.closest("[data-profile-link]");
@@ -197,6 +215,11 @@ function updatePagination() {
 nextBtn.addEventListener("click", goToNextPage);
 prevBtn.addEventListener("click", goToPreviousPage);
 input.addEventListener("input", applySearch);
+sortSelect.addEventListener("change", (event) => {
+    const target = event.currentTarget;
+    sortDirection = target.value;
+    applyFiltersAndSort(input.value);
+});
 // INITIALIZATION
 async function init() {
     showLoading();
@@ -207,8 +230,7 @@ async function init() {
             lastUserId = users[users.length - 1].id;
         }
         transformedUsers = users.map(transformUser);
-        filteredUsers = transformedUsers;
-        renderUsers(filteredUsers);
+        applyFiltersAndSort(input.value);
     }
     catch (error) {
         console.error("Failed to initialize users:", error);

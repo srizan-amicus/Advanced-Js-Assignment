@@ -2,6 +2,7 @@ import { apiRequest } from "../utils/api.js";
 import {
   GitHubFollower,
   GitHubRepository,
+  GitHubRepositorySearchResponse,
   GitHubUser,
 } from "../types/card.js";
 
@@ -60,4 +61,25 @@ async getUsers(since?: number): Promise<GitHubUser[]> {
 
     return result.data;
   }
+
+  async searchRepositories(
+  query: string,
+  page: number,
+  perPage: number,
+): Promise<GitHubRepository[]> {
+  const url =
+    `${GITHUB_API}/search/repositories` +
+    `?q=${encodeURIComponent(query)}` +
+    `&page=${page}` +
+    `&per_page=${perPage}`;
+
+  const result =
+    await apiRequest<GitHubRepositorySearchResponse>(url);
+
+  if (!result.success) {
+    throw new Error(result.error);
+  }
+
+  return result.data.items;
+}
 }

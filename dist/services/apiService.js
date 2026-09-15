@@ -32,4 +32,15 @@ export class ApiService {
         }
         return result.data;
     }
+    async searchRepositories(query, page, perPage) {
+        const url = `${GITHUB_API}/search/repositories` +
+            `?q=${encodeURIComponent(query)}` +
+            `&page=${page}` +
+            `&per_page=${perPage}`;
+        const result = await apiRequest(url);
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        return result.data.items;
+    }
 }

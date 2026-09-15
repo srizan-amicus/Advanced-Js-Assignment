@@ -1,10 +1,11 @@
-
 import { GitHubUserBasic, UserCard } from "./types/card.js";
 import { ApiService } from "./services/apiService.js";
 
-
 // API SERVICE
 const apiService = new ApiService();
+
+// TYPES
+type SortDirection = "asc" | "desc";
 
 // STATE
 let transformedUsers: UserCard[] = [];
@@ -13,11 +14,16 @@ let filteredUsers: UserCard[] = [];
 let currentPage = 1;
 let hasNextPage = true;
 let lastUserId: number | null = null;
+let sortDirection: SortDirection = "asc";
+
 const usersPerPage = 10;
 
 // DOM ELEMENTS
 const input = document.getElementById("input") as HTMLInputElement;
 
+const sortSelect = document.getElementById(
+  "sort",
+) as HTMLSelectElement;
 
 const prevBtn = document.getElementById(
   "prev-btn",
@@ -85,32 +91,49 @@ function showError(): void {
   `;
 }
 
-
-//picking only the field required for cards
+// TRANSFORM USER
+// Picks only the fields required by the UI.
 function transformUser(user: GitHubUserBasic): UserCard {
   return {
     login: user.login,
     id: user.id,
-    name:user.name,
+    name: user.name,
     avatar: user.avatar_url,
   };
 }
 
-// searching
-function applySearch(event: InputEvent): void {
-  const target = event.currentTarget as HTMLInputElement;
+// FILTER + SORT
+function applyFiltersAndSort(searchTerm: string): void {
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
-  const searchTerm = target.value.trim().toLowerCase();
+  let result = transformedUsers.filter(
+    (user: UserCard) =>
+      user.login.toLowerCase().includes(normalizedSearchTerm) ||
+      user.name?.toLowerCase().includes(normalizedSearchTerm),
+  );
 
-  filteredUsers = transformedUsers.filter(
-  (user: UserCard) =>
-    user.login.toLowerCase().includes(searchTerm) ||
-    user.name?.toLowerCase().includes(searchTerm),
-);
+  result = [...result].sort((a, b) => {
+    const nameA = a.name ?? a.login;
+    const nameB = b.name ?? b.login;
+
+    return sortDirection === "asc"
+      ? nameA.localeCompare(nameB)
+      : nameB.localeCompare(nameA);
+  });
+
+  filteredUsers = result;
+
   renderUsers(filteredUsers);
 }
 
-// PAGINATION
+// SEARCH
+function applySearch(event: InputEvent): void {
+  const target = event.currentTarget as HTMLInputElement;
+
+  applyFiltersAndSort(target.value);
+}
+
+// NEXT PAGE
 async function goToNextPage(event: MouseEvent): Promise<void> {
   event.preventDefault();
 
@@ -133,9 +156,8 @@ async function goToNextPage(event: MouseEvent): Promise<void> {
     pageNumber.textContent = String(currentPage);
 
     transformedUsers = users.map(transformUser);
-    filteredUsers = transformedUsers;
 
-    renderUsers(filteredUsers);
+    applyFiltersAndSort(input.value);
   } catch (error) {
     console.error(
       "Failed to load next page:",
@@ -146,8 +168,7 @@ async function goToNextPage(event: MouseEvent): Promise<void> {
   }
 }
 
-
-//previous page pagination logic
+// PREVIOUS PAGE
 async function goToPreviousPage(event: MouseEvent): Promise<void> {
   event.preventDefault();
 
@@ -166,10 +187,13 @@ async function goToPreviousPage(event: MouseEvent): Promise<void> {
 
     hasNextPage = users.length === usersPerPage;
 
-    transformedUsers = users.map(transformUser);
-    filteredUsers = transformedUsers;
+    if (users.length > 0) {
+      lastUserId = users[users.length - 1].id;
+    }
 
-    renderUsers(filteredUsers);
+    transformedUsers = users.map(transformUser);
+
+    applyFiltersAndSort(input.value);
   } catch (error) {
     console.error(
       "Failed to load previous page:",
@@ -188,9 +212,10 @@ function renderUsers(users: UserCard[]): void {
 
   usersContainer.innerHTML = "";
 
- const paginatedUsers = users;
+  // API already returns only 10 users per page.
+  const paginatedUsers = users;
 
-  // No results
+  // NO RESULTS
   if (paginatedUsers.length === 0) {
     usersContainer.innerHTML = `
       <div class="col-span-full rounded-3xl border border-white/10 bg-white/[0.04] p-10 text-center">
@@ -205,7 +230,7 @@ function renderUsers(users: UserCard[]): void {
     `;
   }
 
-  // Render cards
+  // RENDER CARDS
   paginatedUsers.forEach((user: UserCard) => {
     usersContainer.innerHTML += `
       <article
@@ -250,19 +275,31 @@ function renderUsers(users: UserCard[]): void {
   updatePagination();
 }
 
-usersContainer.addEventListener("click", (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  const profileLink = target.closest<HTMLAnchorElement>("[data-profile-link]");
+// PROFILE LINK HANDLING
+usersContainer.addEventListener(
+  "click",
+  (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
 
-  if (!profileLink) {
-    return;
-  }
+    const profileLink =
+      target.closest<HTMLAnchorElement>(
+        "[data-profile-link]",
+      );
 
-  event.preventDefault();
+    if (!profileLink) {
+      return;
+    }
 
-  const profileWindow = window.open(profileLink.href, "_blank");
-  profileWindow?.focus();
-});
+    event.preventDefault();
+
+    const profileWindow = window.open(
+      profileLink.href,
+      "_blank",
+    );
+
+    profileWindow?.focus();
+  },
+);
 
 // PAGINATION UI
 function updatePagination(): void {
@@ -270,12 +307,22 @@ function updatePagination(): void {
   nextBtn.disabled = !hasNextPage;
 }
 
-
 // EVENT LISTENERS
-
 nextBtn.addEventListener("click", goToNextPage);
 prevBtn.addEventListener("click", goToPreviousPage);
 input.addEventListener("input", applySearch);
+
+sortSelect.addEventListener(
+  "change",
+  (event: Event): void => {
+    const target =
+      event.currentTarget as HTMLSelectElement;
+
+    sortDirection = target.value as SortDirection;
+
+    applyFiltersAndSort(input.value);
+  },
+);
 
 // INITIALIZATION
 async function init(): Promise<void> {
@@ -283,13 +330,16 @@ async function init(): Promise<void> {
 
   try {
     const users = await apiService.getUsers();
+
     hasNextPage = users.length === usersPerPage;
+
     if (users.length > 0) {
       lastUserId = users[users.length - 1].id;
     }
+
     transformedUsers = users.map(transformUser);
-    filteredUsers = transformedUsers;
-    renderUsers(filteredUsers);
+
+    applyFiltersAndSort(input.value);
   } catch (error) {
     console.error(
       "Failed to initialize users:",
